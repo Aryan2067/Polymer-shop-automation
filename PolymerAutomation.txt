@@ -1,0 +1,229 @@
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.testng.Assert;
+import org.testng.annotations.*;
+
+import java.time.Duration;
+import java.util.List;
+
+public class PolymerShopTest {
+
+    WebDriver driver;
+    WebDriverWait wait;
+
+
+    // SETUP
+
+    @BeforeMethod
+    public void setup() {
+
+        EdgeOptions options = new EdgeOptions();
+        driver = new EdgeDriver(options);
+
+        driver.manage().window().maximize();
+        driver.get("https://shop.polymer-project.org/");
+        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+    }
+
+
+    // TEST 1 - Home Page Load
+
+    @Test(priority = 1)
+    public void verifyHomePageLoads() {
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("shop-app")));
+        Assert.assertTrue(driver.getTitle().length() > 0);
+    }
+
+    // TEST 2 - Men Section
+ 
+    @Test(priority = 2)
+    public void verifyMenSection() {
+        clickMenu("Men");
+        Assert.assertTrue(driver.getCurrentUrl().contains("men"));
+    }
+
+
+    // TEST 3 - Women Section
+
+    @Test(priority = 3)
+    public void verifyWomenSection() {
+        clickMenu("Women");
+        Assert.assertTrue(driver.getCurrentUrl().contains("women"));
+    }
+
+
+    // TEST 4 - Product Listing
+
+    @Test(priority = 4)
+    public void verifyProductListing() {
+        clickMenu("Men");
+        List<WebElement> products = waitForProducts();
+        Assert.assertTrue(products.size() > 0);
+    }
+
+
+    // TEST 5 - Add To Cart
+
+    @Test(priority = 5)
+    public void verifyAddToCart() {
+        addFirstProductToCart();
+        Assert.assertTrue(isCartBadgeVisible());
+    }
+
+ 
+    // TEST 6 - Cart Page
+
+    @Test(priority = 6)
+    public void verifyCartPage() {
+        addFirstProductToCart();
+        openCart();
+        Assert.assertTrue(driver.getCurrentUrl().contains("cart"));
+    }
+
+    // TEST 7 - Page Refresh
+
+    @Test(priority = 7)
+    public void verifyRefresh() {
+        driver.navigate().refresh();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("shop-app")));
+        Assert.assertTrue(driver.getTitle().length() > 0);
+    }
+
+    // TEST 8 - Base URL
+
+    @Test(priority = 8)
+    public void verifyBaseURL() {
+        Assert.assertEquals(driver.getCurrentUrl(), "https://shop.polymer-project.org/");
+    }
+
+
+    // TEST 9 - Multiple Products Navigation
+
+    @Test(priority = 9)
+    public void verifyMultipleProductNavigation() {
+        clickMenu("Men");
+        List<WebElement> products = waitForProducts();
+        products.get(1).click();
+        Assert.assertTrue(driver.getCurrentUrl().contains("detail"));
+    }
+
+
+    // TEST 10 - Back & Forward
+
+    @Test(priority = 10)
+    public void verifyBrowserNavigation() {
+        clickMenu("Men");
+        driver.navigate().back();
+        driver.navigate().forward();
+        Assert.assertTrue(driver.getCurrentUrl().contains("men"));
+    }
+
+
+    // TEST 11 - Cart Badge Count
+
+    @Test(priority = 11)
+    public void verifyCartBadgeCount() {
+        addFirstProductToCart();
+        WebElement badge = driver.findElement(By.cssSelector(".cart-badge"));
+        Assert.assertEquals(badge.getText(), "1");
+    }
+
+
+    // TEST 12 - Quantity Change
+
+    @Test(priority = 12)
+    public void verifyQuantityChange() {
+        addFirstProductToCart();
+        openCart();
+
+        WebElement qty = wait.until(ExpectedConditions.elementToBeClickable(
+                By.cssSelector("input.quantity")));
+        qty.clear();
+        qty.sendKeys("2");
+
+        Assert.assertEquals(qty.getAttribute("value"), "2");
+    }
+
+  
+    // TEST 13 - Remove Item
+
+    @Test(priority = 13)
+    public void verifyRemoveItemFromCart() {
+        addFirstProductToCart();
+        openCart();
+
+        wait.until(ExpectedConditions.elementToBeClickable(
+                By.cssSelector("button[aria-label*='Remove']"))).click();
+
+        Assert.assertFalse(isCartBadgeVisibleSafe());
+    }
+
+
+    // TEST 14 - Footer Links
+
+    @Test(priority = 14)
+    public void verifyFooterLinks() {
+        List<WebElement> links = driver.findElements(By.tagName("a"));
+        Assert.assertTrue(links.size() > 5);
+    }
+
+
+    // TEST 15 - Title Stability
+
+    @Test(priority = 15)
+    public void verifyTitleConsistency() {
+        String title1 = driver.getTitle();
+        clickMenu("Men");
+        driver.navigate().back();
+        String title2 = driver.getTitle();
+        Assert.assertEquals(title1, title2);
+    }
+
+
+    // HELPER METHODS
+
+    private void clickMenu(String name) {
+        wait.until(ExpectedConditions.elementToBeClickable(By.linkText(name))).click();
+    }
+
+    private List<WebElement> waitForProducts() {
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("li.item")));
+        return driver.findElements(By.cssSelector("li.item"));
+    }
+
+    private void addFirstProductToCart() {
+        clickMenu("Men");
+        waitForProducts().get(0).click();
+        wait.until(ExpectedConditions.elementToBeClickable(
+                By.cssSelector("button[aria-label*='Add this item to cart']"))).click();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".cart-badge")));
+    }
+
+    private void openCart() {
+        wait.until(ExpectedConditions.elementToBeClickable(
+                By.cssSelector("a[href='/cart']"))).click();
+    }
+
+    private boolean isCartBadgeVisible() {
+        return driver.findElement(By.cssSelector(".cart-badge")).isDisplayed();
+    }
+
+    private boolean isCartBadgeVisibleSafe() {
+        return driver.findElements(By.cssSelector(".cart-badge")).size() > 0;
+    }
+
+
+    // TEARDOWN
+
+    @AfterMethod
+    public void tearDown() {
+        if (driver != null) {
+            driver.quit();
+        }
+    }
+}
