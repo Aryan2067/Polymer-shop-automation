@@ -28,4 +28,4 @@ Selenium automation suite built using:
 
 ---
 
-Developed as part of automation practice project.
+Developed as part of automation practice project..
